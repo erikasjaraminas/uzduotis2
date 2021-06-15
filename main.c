@@ -8,20 +8,54 @@
 #include <file_operations.h>
 #include <parser.h>
 
+char **audio_types = malloc(1 * sizeof(char *));
+char **video_types = malloc(1 * sizeof(char *));
+char **photo_types = malloc(1 * sizeof(char *));
+char **document_types = malloc(1 * sizeof(char *));
+char **types_to_watch = malloc(1 * sizeof(char *));
+
+int audio_types_count = 0;
+int video_types_count = 0;
+int photo_types_count = 0;
+int docoment_types_count = 0;
+int types_to_watch_count = 0;
+
+void free_up_memory() {
+
+	// audio_types
+	for (int i = 0; i < audio_types_count; i++) {
+		free(audio_types[i]);
+	}
+	free(audio_types);
+
+	// video_types
+	for (int i = 0; i < video_types_count; i++) {
+		free(video_types[i]);
+	}
+	free(video_types);
+
+	// photo_types
+	for (int i = 0; i < photo_types_count; i++) {
+		free(photo_types[i]);
+	}
+	free(photo_types);
+
+	// document_types
+	for (int i = 0; i < docoment_types_count; i++) {
+		free(document_types[i]);
+	}
+	free(document_types);
+
+	// types_to_watch
+	for (int i = 0; i < types_to_watch_count; i++) {
+		free(types_to_watch[i]);
+	}
+	free(types_to_watch);
+}
+
 int main() {
 
 	char dir_to_watch[256];
-	char **audio_types = malloc(1 * sizeof(char *));
-	char **video_types = malloc(1 * sizeof(char *));
-	char **photo_types = malloc(1 * sizeof(char *));
-	char **document_types = malloc(1 * sizeof(char *));
-	char **types_to_watch = malloc(1 * sizeof(char *));
-
-	int audio_types_count = 0;
-	int video_types_count = 0;
-	int photo_types_count = 0;
-	int docoment_types_count = 0;
-	int types_to_watch_count = 0;
 
 	struct dirent *pDirent;
 	DIR *pDir = NULL;
@@ -52,7 +86,7 @@ int main() {
 	// Change the current working directory to root.
 	chdir("/");
 	// Open a log file in write mode.
-	log = fopen("log.txt", "w");
+	log = fopen("/var/log/daemon.log", "w");
 	if (log == NULL) {
 		perror("Error opening log file");
 
@@ -61,7 +95,7 @@ int main() {
 	}
 
 	config_option_t co;
-	if ((co = read_config_file("watchlist.conf")) == NULL) {
+	if ((co = read_config_file("/etc/watchlist.conf")) == NULL) {
 		perror("read_config_file()");
 		return -1;
 	}
@@ -227,35 +261,7 @@ int main() {
 		sleep(5);
 	}
 
-	// audio_types
-	for (int i = 0; i < audio_types_count; i++) {
-		free(audio_types[i]);
-	}
-	free(audio_types);
-
-	// video_types
-	for (int i = 0; i < video_types_count; i++) {
-		free(video_types[i]);
-	}
-	free(video_types);
-
-	// photo_types
-	for (int i = 0; i < photo_types_count; i++) {
-		free(photo_types[i]);
-	}
-	free(photo_types);
-
-	// document_types
-	for (int i = 0; i < docoment_types_count; i++) {
-		free(document_types[i]);
-	}
-	free(document_types);
-
-	// types_to_watch
-	for (int i = 0; i < types_to_watch_count; i++) {
-		free(types_to_watch[i]);
-	}
-	free(types_to_watch);
+	free_up_memory();
 
 	fclose(log);
 
