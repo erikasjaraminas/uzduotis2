@@ -21,8 +21,8 @@ int checkFile(char *filename, char *type) {
 }
 
 int move(char *oldpath, char *newpath, char *filename) {
-
-    char old[256];
+	
+	char old[256];
 	char new[256];
 
 	sprintf(old, "%s/%s", oldpath, filename);
