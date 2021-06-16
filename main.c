@@ -8,6 +8,7 @@
 #include <file_operations.h>
 #include <parser.h>
 
+char dir_to_watch[256];
 char **audio_types;
 char **video_types;
 char **photo_types;
@@ -17,7 +18,7 @@ char **types_to_watch;
 int audio_types_count = 0;
 int video_types_count = 0;
 int photo_types_count = 0;
-int docoment_types_count = 0;
+int document_types_count = 0;
 int types_to_watch_count = 0;
 
 void free_up_memory() {
@@ -41,7 +42,7 @@ void free_up_memory() {
 	free(photo_types);
 
 	// document_types
-	for (int i = 0; i < docoment_types_count; i++) {
+	for (int i = 0; i < document_types_count; i++) {
 		free(document_types[i]);
 	}
 	free(document_types);
@@ -60,27 +61,100 @@ void exit_program(int status) {
 	exit(status);
 }
 
-void read_values(char ***types, int *types_count, char *value) {
+void read_values() {
 
+	config_option_t co;
+	if ((co = read_config_file("/etc/watchlist.conf")) == NULL) {
+		perror("read_config_file()");
+
+		exit_program(1);
+	}
+	
 	int c = 0;
 	char *token;
-	*types[0] = (char *) malloc(5 * sizeof(char));
-	token = strtok(value, ",");
-	strcpy(*types[0], token);
-	token = strtok(NULL, ",");
-	c = 1;
-	while (token != NULL) {
-		*types = realloc(*types, (c + 1) * sizeof(char *));
-		*types[c] = strdup(token);
-		token = strtok(NULL, ",");
-		c++;
+	while(1) {
+		if (!strcmp(co->key, "dir_to_watch")) {
+			strcpy(dir_to_watch, co->value);
+		}
+		if (!strcmp(co->key, "audio_types")) {
+			audio_types[0] = (char *) malloc(5 * sizeof(char));
+			token = strtok(co->value, ",");
+			strcpy(audio_types[0], token);
+			token = strtok(NULL, ",");
+			c = 1;
+			while (token != NULL) {
+				audio_types = realloc(audio_types, (c + 1) * sizeof(char *));
+				audio_types[c] = strdup(token);
+				token = strtok(NULL, ",");
+				c++;
+			}
+			audio_types_count = c;
+		}
+		if (!strcmp(co->key, "video_types")) {
+			video_types[0] = (char *) malloc(5 * sizeof(char));
+			token = strtok(co->value, ",");
+			strcpy(video_types[0], token);
+			token = strtok(NULL, ",");
+			c = 1;
+			while (token != NULL) {
+				video_types = realloc(video_types, (c + 1) * sizeof(char *));
+				video_types[c] = strdup(token);
+				token = strtok(NULL, ",");
+				c++;
+			}
+			video_types_count = c;
+		}
+		if (!strcmp(co->key, "photo_types")) {
+			photo_types[0] = (char *) malloc(5 * sizeof(char));
+			token = strtok(co->value, ",");
+			strcpy(photo_types[0], token);
+			token = strtok(NULL, ",");
+			c = 1;
+			while (token != NULL) {
+				photo_types = realloc(photo_types, (c + 1) * sizeof(char *));
+				photo_types[c] = strdup(token);
+				token = strtok(NULL, ",");
+				c++;
+			}
+			photo_types_count = c;
+		}
+		if (!strcmp(co->key, "document_types")) {
+			document_types[0] = (char *) malloc(5 * sizeof(char));
+			token = strtok(co->value, ",");
+			strcpy(document_types[0], token);
+			token = strtok(NULL, ",");
+			c = 1;
+			while (token != NULL) {
+				document_types = realloc(document_types, (c + 1) * sizeof(char *));
+				document_types[c] = strdup(token);
+				token = strtok(NULL, ",");
+				c++;
+			}
+			document_types_count = c;
+		}
+		if (!strcmp(co->key, "types_to_watch")) {
+			types_to_watch[0] = (char *) malloc(5 * sizeof(char));
+			token = strtok(co->value, ",");
+			strcpy(types_to_watch[0], token);
+			token = strtok(NULL, ",");
+			c = 1;
+			while (token != NULL) {
+				types_to_watch = realloc(types_to_watch, (c + 1) * sizeof(char *));
+				types_to_watch[c] = strdup(token);
+				token = strtok(NULL, ",");
+				c++;
+			}
+			types_to_watch_count = c;
+		}
+		if (co->prev != NULL) {
+			co = co->prev;
+		} else {
+			break;
+		}
 	}
-	*types_count = c;
 }
 
 int main() {
-
-	char dir_to_watch[256];
 
 	audio_types = (char **) malloc(1 * sizeof(char *));
 	video_types = (char **) malloc(1 * sizeof(char *));
@@ -125,94 +199,7 @@ int main() {
 		exit_program(1);
 	}
 
-	config_option_t co;
-	if ((co = read_config_file("/etc/watchlist.conf")) == NULL) {
-		perror("read_config_file()");
-		return -1;
-	}
-	int c = 0;
-	char *token;
-	while(1) {
-		if (!strcmp(co->key, "dir_to_watch")) {
-			strcpy(dir_to_watch, co->value);
-		}
-		if (!strcmp(co->key, "audio_types")) {
-			read_values(&audio_types, &audio_types_count, co->value);
-			/*audio_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(audio_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				audio_types = realloc(audio_types, (c + 1) * sizeof(char *));
-				audio_types[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			audio_types_count = c;*/
-		}
-		if (!strcmp(co->key, "video_types")) {
-			video_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(video_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				video_types = realloc(video_types, (c + 1) * sizeof(char *));
-				video_types[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			video_types_count = c;
-		}
-		if (!strcmp(co->key, "photo_types")) {
-			photo_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(photo_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				photo_types = realloc(photo_types, (c + 1) * sizeof(char *));
-				photo_types[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			photo_types_count = c;
-		}
-		if (!strcmp(co->key, "document_types")) {
-			document_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(document_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				document_types = realloc(document_types, (c + 1) * sizeof(char *));
-				document_types[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			docoment_types_count = c;
-		}
-		if (!strcmp(co->key, "types_to_watch")) {
-			types_to_watch[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(types_to_watch[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				types_to_watch = realloc(types_to_watch, (c + 1) * sizeof(char *));
-				types_to_watch[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			types_to_watch_count = c;
-		}
-		if (co->prev != NULL) {
-			co = co->prev;
-		} else {
-			break;
-		}
-	}
+	read_values();
 	// Close stdin. stdout and stderr
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
@@ -228,6 +215,10 @@ int main() {
 		if (pDir == NULL) {
 			file_printnflush(log, "Error opening '%s'\n", dir_to_watch);
 			exit_program(1);
+		}
+
+		for (int i = 0; i < audio_types_count; i++) {
+			printf("%s\n", audio_types[i]);
 		}
 
 		while ((pDirent = readdir(pDir)) != NULL) {
@@ -279,7 +270,7 @@ int main() {
 					}
 				}
 				if (!strcmp(types_to_watch[a], "document")) {
-					for (int b = 0; b < docoment_types_count; b++) {
+					for (int b = 0; b < document_types_count; b++) {
 						if (checkFile(pDirent->d_name, document_types[b])) {
 							sprintf(newpath, "%s/Documents", homedir);
 							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
