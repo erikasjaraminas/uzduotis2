@@ -60,6 +60,24 @@ void exit_program(int status) {
 	exit(status);
 }
 
+void read_values(char ***types, int *types_count, char *value) {
+
+	int c = 0;
+	char *token;
+	*types[0] = (char *) malloc(5 * sizeof(char));
+	token = strtok(value, ",");
+	strcpy(*types[0], token);
+	token = strtok(NULL, ",");
+	c = 1;
+	while (token != NULL) {
+		*types = realloc(*types, (c + 1) * sizeof(char *));
+		*types[c] = strdup(token);
+		token = strtok(NULL, ",");
+		c++;
+	}
+	*types_count = c;
+}
+
 int main() {
 
 	char dir_to_watch[256];
@@ -119,7 +137,8 @@ int main() {
 			strcpy(dir_to_watch, co->value);
 		}
 		if (!strcmp(co->key, "audio_types")) {
-			audio_types[0] = (char *) malloc(5 * sizeof(char));
+			read_values(&audio_types, &audio_types_count, co->value);
+			/*audio_types[0] = (char *) malloc(5 * sizeof(char));
 			token = strtok(co->value, ",");
 			strcpy(audio_types[0], token);
 			token = strtok(NULL, ",");
@@ -130,7 +149,7 @@ int main() {
 				token = strtok(NULL, ",");
 				c++;
 			}
-			audio_types_count = c;
+			audio_types_count = c;*/
 		}
 		if (!strcmp(co->key, "video_types")) {
 			video_types[0] = (char *) malloc(5 * sizeof(char));
