@@ -217,10 +217,6 @@ int main() {
 			exit_program(1);
 		}
 
-		for (int i = 0; i < audio_types_count; i++) {
-			printf("%s\n", audio_types[i]);
-		}
-
 		while ((pDirent = readdir(pDir)) != NULL) {
 			if (!strcmp(pDirent->d_name, ".") || !strcmp(pDirent->d_name, "..")) {
 				continue;
