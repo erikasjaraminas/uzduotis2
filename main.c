@@ -8,11 +8,11 @@
 #include <file_operations.h>
 #include <parser.h>
 
-char **audio_types = malloc(1 * sizeof(char *));
-char **video_types = malloc(1 * sizeof(char *));
-char **photo_types = malloc(1 * sizeof(char *));
-char **document_types = malloc(1 * sizeof(char *));
-char **types_to_watch = malloc(1 * sizeof(char *));
+char **audio_types;
+char **video_types;
+char **photo_types;
+char **document_types;
+char **types_to_watch;
 
 int audio_types_count = 0;
 int video_types_count = 0;
@@ -53,9 +53,22 @@ void free_up_memory() {
 	free(types_to_watch);
 }
 
+void exit_program(int status) {
+
+	free_up_memory();
+
+	exit(status);
+}
+
 int main() {
 
 	char dir_to_watch[256];
+
+	audio_types = (char **) malloc(1 * sizeof(char *));
+	video_types = (char **) malloc(1 * sizeof(char *));
+	photo_types = (char **) malloc(1 * sizeof(char *));
+	document_types = (char **) malloc(1 * sizeof(char *));
+	types_to_watch = (char **) malloc(1 * sizeof(char *));
 
 	struct dirent *pDirent;
 	DIR *pDir = NULL;
@@ -69,19 +82,19 @@ int main() {
 	// Indication of fork() failure
 	if (process_id < 0) {
 		printf("fork failed!\n");
-		exit(1);
+		exit_program(1);
 	}
 	// PARENT PROCESS. Need to kill it.
 	if (process_id > 0) {
 		printf("process_id of child process %d \n", process_id);
-		exit(0);
+		exit_program(0);
 	}
 	//unmask the file mode
 	umask(0);
 	//set new session
 	sid = setsid();
 	if(sid < 0) {
-		exit(1);
+		exit_program(1);
 	}
 	// Change the current working directory to root.
 	chdir("/");
@@ -91,7 +104,7 @@ int main() {
 		perror("Error opening log file");
 
 		// Program exits if the file pointer returns NULL.
-		exit(1);
+		exit_program(1);
 	}
 
 	config_option_t co;
@@ -188,11 +201,14 @@ int main() {
 
 	file_printnflush(log, "Starting log file...\n\n");
 
+	char *homedir = getenv("HOME");
+	char newpath[256];
+
 	while (1) {
 		pDir = opendir(dir_to_watch);
 		if (pDir == NULL) {
 			file_printnflush(log, "Error opening '%s'\n", dir_to_watch);
-			exit(1);
+			exit_program(1);
 		}
 
 		while ((pDirent = readdir(pDir)) != NULL) {
@@ -204,8 +220,9 @@ int main() {
 				if (!strcmp(types_to_watch[a], "audio")) {
 					for (int b = 0; b < audio_types_count; b++) {
 						if (checkFile(pDirent->d_name, audio_types[b])) {
-							file_printnflush(log, "Moving file '%s' to '/home/erikas/Music'. ", pDirent->d_name);
-							int ret = move(dir_to_watch, "/home/erikas/Music", pDirent->d_name);
+							sprintf(newpath, "%s/Music", homedir);
+							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
+							int ret = move(dir_to_watch, newpath, pDirent->d_name);
 							if (ret) {
 								file_printnflush(log, "Failed.\n");
 							} else {
@@ -217,8 +234,9 @@ int main() {
 				if (!strcmp(types_to_watch[a], "video")) {
 					for (int b = 0; b < video_types_count; b++) {
 						if (checkFile(pDirent->d_name, video_types[b])) {
-							file_printnflush(log, "Moving file '%s' to '/home/erikas/Videos'. ", pDirent->d_name);
-							int ret = move(dir_to_watch, "/home/erikas/Videos", pDirent->d_name);
+							sprintf(newpath, "%s/Videos", homedir);
+							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
+							int ret = move(dir_to_watch, newpath, pDirent->d_name);
 							if (ret) {
 								file_printnflush(log, "Failed.\n");
 							} else {
@@ -230,8 +248,9 @@ int main() {
 				if (!strcmp(types_to_watch[a], "photo")) {
 					for (int b = 0; b < photo_types_count; b++) {
 						if (checkFile(pDirent->d_name, photo_types[b])) {
-							file_printnflush(log, "Moving file '%s' to '/home/erikas/Pictures'. ", pDirent->d_name);
-							int ret = move(dir_to_watch, "/home/erikas/Pictures", pDirent->d_name);
+							sprintf(newpath, "%s/Pictures", homedir);
+							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
+							int ret = move(dir_to_watch, newpath, pDirent->d_name);
 							if (ret) {
 								file_printnflush(log, "Failed.\n");
 							} else {
@@ -243,8 +262,9 @@ int main() {
 				if (!strcmp(types_to_watch[a], "document")) {
 					for (int b = 0; b < docoment_types_count; b++) {
 						if (checkFile(pDirent->d_name, document_types[b])) {
-							file_printnflush(log, "Moving file '%s' to '/home/erikas/Documents'. ", pDirent->d_name);
-							int ret = move(dir_to_watch, "/home/erikas/Documents", pDirent->d_name);
+							sprintf(newpath, "%s/Documents", homedir);
+							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
+							int ret = move(dir_to_watch, newpath, pDirent->d_name);
 							if (ret) {
 								file_printnflush(log, "Failed.\n");
 							} else {
