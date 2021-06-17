@@ -8,50 +8,29 @@
 #include <file_operations.h>
 #include <parser.h>
 
-char dir_to_watch[256];
-char **audio_types;
-char **video_types;
-char **photo_types;
-char **document_types;
-char **types_to_watch;
+#define READ_ELEMENTS 5
 
-int audio_types_count = 0;
-int video_types_count = 0;
-int photo_types_count = 0;
-int document_types_count = 0;
-int types_to_watch_count = 0;
+struct Info
+{
+	char **value;
+	char key_name[48];
+	char folder_name[24];
+	int count;
+};
+
+struct Info keys_values[READ_ELEMENTS];
+
+char dir_to_watch[256];
+FILE *log_file = NULL;
 
 void free_up_memory() {
 
-	// audio_types
-	for (int i = 0; i < audio_types_count; i++) {
-		free(audio_types[i]);
+	for (int x = 0; x < READ_ELEMENTS; x++) {
+		for (int y = 0; y < keys_values[x].count; y++) {
+			free(keys_values[x].value[y]);
+		}
+		free(keys_values[x].value);
 	}
-	free(audio_types);
-
-	// video_types
-	for (int i = 0; i < video_types_count; i++) {
-		free(video_types[i]);
-	}
-	free(video_types);
-
-	// photo_types
-	for (int i = 0; i < photo_types_count; i++) {
-		free(photo_types[i]);
-	}
-	free(photo_types);
-
-	// document_types
-	for (int i = 0; i < document_types_count; i++) {
-		free(document_types[i]);
-	}
-	free(document_types);
-
-	// types_to_watch
-	for (int i = 0; i < types_to_watch_count; i++) {
-		free(types_to_watch[i]);
-	}
-	free(types_to_watch);
 }
 
 void exit_program(int status) {
@@ -59,6 +38,20 @@ void exit_program(int status) {
 	free_up_memory();
 
 	exit(status);
+}
+
+void assign_key_values() {
+
+	strcpy(keys_values[0].key_name, "audio_types");
+	strcpy(keys_values[1].key_name, "video_types");
+	strcpy(keys_values[2].key_name, "photo_types");
+	strcpy(keys_values[3].key_name, "document_types");
+	strcpy(keys_values[4].key_name, "types_to_watch");
+
+	strcpy(keys_values[0].folder_name, "%s/Music");
+	strcpy(keys_values[1].folder_name, "%s/Videos");
+	strcpy(keys_values[2].folder_name, "%s/Pictures");
+	strcpy(keys_values[3].folder_name, "%s/Documents");
 }
 
 void read_values() {
@@ -76,75 +69,21 @@ void read_values() {
 		if (!strcmp(co->key, "dir_to_watch")) {
 			strcpy(dir_to_watch, co->value);
 		}
-		if (!strcmp(co->key, "audio_types")) {
-			audio_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(audio_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				audio_types = realloc(audio_types, (c + 1) * sizeof(char *));
-				audio_types[c] = strdup(token);
+		for (int i = 0; i < READ_ELEMENTS; i++) {
+			if (!strcmp(co->key, keys_values[i].key_name)) {
+				keys_values[i].value[0] = (char *) malloc(5 * sizeof(char));
+				token = strtok(co->value, ",");
+				strcpy(keys_values[i].value[0], token);
 				token = strtok(NULL, ",");
-				c++;
+				c = 1;
+				while (token != NULL) {
+					keys_values[i].value = realloc(keys_values[i].value, (c + 1) * sizeof(char *));
+					keys_values[i].value[c] = strdup(token);
+					token = strtok(NULL, ",");
+					c++;
+				}
+				keys_values[i].count = c;
 			}
-			audio_types_count = c;
-		}
-		if (!strcmp(co->key, "video_types")) {
-			video_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(video_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				video_types = realloc(video_types, (c + 1) * sizeof(char *));
-				video_types[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			video_types_count = c;
-		}
-		if (!strcmp(co->key, "photo_types")) {
-			photo_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(photo_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				photo_types = realloc(photo_types, (c + 1) * sizeof(char *));
-				photo_types[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			photo_types_count = c;
-		}
-		if (!strcmp(co->key, "document_types")) {
-			document_types[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(document_types[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				document_types = realloc(document_types, (c + 1) * sizeof(char *));
-				document_types[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			document_types_count = c;
-		}
-		if (!strcmp(co->key, "types_to_watch")) {
-			types_to_watch[0] = (char *) malloc(5 * sizeof(char));
-			token = strtok(co->value, ",");
-			strcpy(types_to_watch[0], token);
-			token = strtok(NULL, ",");
-			c = 1;
-			while (token != NULL) {
-				types_to_watch = realloc(types_to_watch, (c + 1) * sizeof(char *));
-				types_to_watch[c] = strdup(token);
-				token = strtok(NULL, ",");
-				c++;
-			}
-			types_to_watch_count = c;
 		}
 		if (co->prev != NULL) {
 			co = co->prev;
@@ -154,19 +93,8 @@ void read_values() {
 	}
 }
 
-int main() {
+void create_daemon_process() {
 
-	audio_types = (char **) malloc(1 * sizeof(char *));
-	video_types = (char **) malloc(1 * sizeof(char *));
-	photo_types = (char **) malloc(1 * sizeof(char *));
-	document_types = (char **) malloc(1 * sizeof(char *));
-	types_to_watch = (char **) malloc(1 * sizeof(char *));
-
-	struct dirent *pDirent;
-	DIR *pDir = NULL;
-
-	FILE *conf = NULL;
-	FILE *log = NULL;
 	pid_t process_id = 0;
 	pid_t sid = 0;
 	// Create child process
@@ -190,30 +118,58 @@ int main() {
 	}
 	// Change the current working directory to root.
 	chdir("/");
+	// Close stdin. stdout and stderr
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+}
+
+void move_files(int key, char *filename) {
+
+	char *homedir = getenv("HOME");
+	char newpath[256];
+
+	for (int b = 0; b < keys_values[key].count; b++) {
+		if (checkFile(filename, keys_values[key].value[b])) {
+			sprintf(newpath, keys_values[key].folder_name, homedir);
+			file_printnflush(log_file, "Moving file '%s' to '%s'. ", filename, newpath);
+			int ret = move(dir_to_watch, newpath, filename);
+			if (ret) {
+				file_printnflush(log_file, "Failed.\n");
+			} else {
+				file_printnflush(log_file, "Success!\n");
+			}
+		}
+	}
+}
+
+int main() {
+
+	for (int i = 0; i < READ_ELEMENTS; i++) {
+		keys_values[i].value = (char **) malloc(1 * sizeof(char *));
+	}
+
+	struct dirent *pDirent;
+	DIR *pDir = NULL;
+	FILE *conf = NULL;
 	// Open a log file in write mode.
-	log = fopen("/var/log/daemon.log", "w");
-	if (log == NULL) {
+	log_file = fopen("/var/log/daemon.log", "w");
+	if (log_file == NULL) {
 		perror("Error opening log file");
 
 		// Program exits if the file pointer returns NULL.
 		exit_program(1);
 	}
+	file_printnflush(log_file, "Starting log file...\n\n");
 
+	assign_key_values();
 	read_values();
-	// Close stdin. stdout and stderr
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
-
-	file_printnflush(log, "Starting log file...\n\n");
-
-	char *homedir = getenv("HOME");
-	char newpath[256];
+	create_daemon_process();
 
 	while (1) {
 		pDir = opendir(dir_to_watch);
 		if (pDir == NULL) {
-			file_printnflush(log, "Error opening '%s'\n", dir_to_watch);
+			file_printnflush(log_file, "Error opening '%s'\n", dir_to_watch);
 			exit_program(1);
 		}
 
@@ -222,62 +178,18 @@ int main() {
 				continue;
 			}
 
-			for (int a = 0; a < types_to_watch_count; a++) {
-				if (!strcmp(types_to_watch[a], "audio")) {
-					for (int b = 0; b < audio_types_count; b++) {
-						if (checkFile(pDirent->d_name, audio_types[b])) {
-							sprintf(newpath, "%s/Music", homedir);
-							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
-							int ret = move(dir_to_watch, newpath, pDirent->d_name);
-							if (ret) {
-								file_printnflush(log, "Failed.\n");
-							} else {
-								file_printnflush(log, "Success!\n");
-							}
-						}
-					}
+			for (int a = 0; a < keys_values[4].count; a++) {
+				if (!strcmp(keys_values[4].value[a], "audio")) {
+					move_files(0, pDirent->d_name);
 				}
-				if (!strcmp(types_to_watch[a], "video")) {
-					for (int b = 0; b < video_types_count; b++) {
-						if (checkFile(pDirent->d_name, video_types[b])) {
-							sprintf(newpath, "%s/Videos", homedir);
-							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
-							int ret = move(dir_to_watch, newpath, pDirent->d_name);
-							if (ret) {
-								file_printnflush(log, "Failed.\n");
-							} else {
-								file_printnflush(log, "Success!\n");
-							}
-						}
-					}
+				if (!strcmp(keys_values[4].value[a], "video")) {
+					move_files(1, pDirent->d_name);
 				}
-				if (!strcmp(types_to_watch[a], "photo")) {
-					for (int b = 0; b < photo_types_count; b++) {
-						if (checkFile(pDirent->d_name, photo_types[b])) {
-							sprintf(newpath, "%s/Pictures", homedir);
-							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
-							int ret = move(dir_to_watch, newpath, pDirent->d_name);
-							if (ret) {
-								file_printnflush(log, "Failed.\n");
-							} else {
-								file_printnflush(log, "Success!\n");
-							}
-						}
-					}
+				if (!strcmp(keys_values[4].value[a], "photo")) {
+					move_files(2, pDirent->d_name);
 				}
-				if (!strcmp(types_to_watch[a], "document")) {
-					for (int b = 0; b < document_types_count; b++) {
-						if (checkFile(pDirent->d_name, document_types[b])) {
-							sprintf(newpath, "%s/Documents", homedir);
-							file_printnflush(log, "Moving file '%s' to '%s'. ", pDirent->d_name, newpath);
-							int ret = move(dir_to_watch, newpath, pDirent->d_name);
-							if (ret) {
-								file_printnflush(log, "Failed.\n");
-							} else {
-								file_printnflush(log, "Success!\n");
-							}
-						}
-					}
+				if (!strcmp(keys_values[4].value[a], "document")) {
+					move_files(3, pDirent->d_name);
 				}
 			}
 		}
@@ -289,7 +201,7 @@ int main() {
 
 	free_up_memory();
 
-	fclose(log);
+	fclose(log_file);
 
 	return (0);
 }

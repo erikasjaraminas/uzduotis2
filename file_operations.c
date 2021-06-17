@@ -4,16 +4,17 @@
 
 int checkFile(char *filename, char *type) {
 
-	char str[6];
 	char *ret;
 	ret = strrchr(filename, '.');
-	sprintf(str, ".%s", type);
 
 	if (ret == NULL) {
 		return 0;
 	}
 
-	if (!strcmp(str, ret)) {
+	char str[6];
+	sprintf(str, ".%s", type);
+
+	if (!strcasecmp(str, ret)) {
 		return 1;
 	}
 
