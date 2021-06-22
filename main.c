@@ -27,9 +27,13 @@ void free_up_memory() {
 
 	for (int x = 0; x < READ_ELEMENTS; x++) {
 		for (int y = 0; y < keys_values[x].count; y++) {
-			free(keys_values[x].value[y]);
+			if (keys_values[x].value[y] != NULL) {
+				free(keys_values[x].value[y]);
+			}
 		}
-		free(keys_values[x].value);
+		if (keys_values[x].value != NULL) {
+			free(keys_values[x].value);
+		}
 	}
 }
 
@@ -54,13 +58,11 @@ void assign_key_values() {
 	strcpy(keys_values[3].folder_name, "%s/Documents");
 }
 
-void read_values() {
+int read_values() {
 
 	config_option_t co;
 	if ((co = read_config_file("/etc/watchlist.conf")) == NULL) {
-		perror("read_config_file()");
-
-		exit_program(1);
+		return 1;
 	}
 	
 	int c = 0;
@@ -91,6 +93,8 @@ void read_values() {
 			break;
 		}
 	}
+
+	return 0;
 }
 
 void create_daemon_process() {
@@ -163,7 +167,9 @@ int main() {
 	file_printnflush(log_file, "Starting log file...\n\n");
 
 	assign_key_values();
-	read_values();
+	if (read_values()) {
+		exit_program(1);
+	}
 	create_daemon_process();
 
 	while (1) {
