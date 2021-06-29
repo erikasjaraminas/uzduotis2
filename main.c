@@ -134,8 +134,9 @@ int create_daemon_process() {
 	return 0;
 }
 
-void move_files(int key, char *filename) {
+int move_files(int key, char *filename) {
 
+	int ret;
 	char *homedir = getenv("HOME");
 	char newpath[256];
 
@@ -143,7 +144,7 @@ void move_files(int key, char *filename) {
 		if (checkFile(filename, keys_values[key].value[b])) {
 			sprintf(newpath, keys_values[key].folder_name, homedir);
 			file_printnflush(log_file, "Moving file '%s' to '%s'. ", filename, newpath);
-			int ret = move(dir_to_watch, newpath, filename);
+			ret = move(dir_to_watch, newpath, filename);
 			if (ret) {
 				file_printnflush(log_file, "Failed.\n");
 			} else {
@@ -151,6 +152,8 @@ void move_files(int key, char *filename) {
 			}
 		}
 	}
+
+	return ret;
 }
 
 int main() {
