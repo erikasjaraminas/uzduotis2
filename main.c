@@ -74,6 +74,10 @@ int read_values() {
 		for (int i = 0; i < READ_ELEMENTS; i++) {
 			if (!strcmp(co->key, keys_values[i].key_name)) {
 				keys_values[i].value[0] = (char *) malloc(5 * sizeof(char));
+				if (keys_values[i].value[0] == NULL) {
+					printf("Error creating variables\n");
+					return 1;
+				}
 				token = strtok(co->value, ",");
 				strcpy(keys_values[i].value[0], token);
 				token = strtok(NULL, ",");
@@ -97,7 +101,7 @@ int read_values() {
 	return 0;
 }
 
-void create_daemon_process() {
+int create_daemon_process() {
 
 	pid_t process_id = 0;
 	pid_t sid = 0;
@@ -106,19 +110,19 @@ void create_daemon_process() {
 	// Indication of fork() failure
 	if (process_id < 0) {
 		printf("fork failed!\n");
-		exit_program(1);
+		return process_id;
 	}
 	// PARENT PROCESS. Need to kill it.
 	if (process_id > 0) {
 		printf("process_id of child process %d \n", process_id);
-		exit_program(0);
+		exit(0);
 	}
 	//unmask the file mode
 	umask(0);
 	//set new session
 	sid = setsid();
 	if(sid < 0) {
-		exit_program(1);
+		return sid;
 	}
 	// Change the current working directory to root.
 	chdir("/");
@@ -126,6 +130,8 @@ void create_daemon_process() {
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
+
+	return 0;
 }
 
 void move_files(int key, char *filename) {
@@ -151,6 +157,12 @@ int main() {
 
 	for (int i = 0; i < READ_ELEMENTS; i++) {
 		keys_values[i].value = (char **) malloc(1 * sizeof(char *));
+
+		if (keys_values[i].value == NULL) {
+			printf("Error creating variables\n");
+
+			exit_program(1);
+		}
 	}
 
 	struct dirent *pDirent;
@@ -168,9 +180,13 @@ int main() {
 
 	assign_key_values();
 	if (read_values()) {
+		printf("Error reading configuration file.\n");
 		exit_program(1);
 	}
-	create_daemon_process();
+	if (create_daemon_process() < 0) {
+		printf("Error creating daemon process.\n");
+		exit_program(1);
+	}
 
 	while (1) {
 		pDir = opendir(dir_to_watch);
