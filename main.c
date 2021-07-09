@@ -30,9 +30,6 @@ struct Watch watchlist[NUM_WATCHFOLDERS];
 
 FILE *log_file = NULL;
 
-struct dirent *pDirent;
-DIR *pDir = NULL;
-
 void free_up_memory() {
 
 	for (int x = 0; x < READ_ELEMENTS; x++) {
@@ -177,6 +174,8 @@ int move_files(int key, int idx, char *filename) {
 void *perform_work(void *arguments) {
 
 	int index = *((int *)arguments);
+	struct dirent *pDirent;
+	DIR *pDir = NULL;
 
 	while (1) {
 		pDir = opendir(watchlist[index].dir_to_watch);
