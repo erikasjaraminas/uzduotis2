@@ -4,7 +4,7 @@ SRC := $(wildcard *.c)
 OBJ := $(SRC:.c=.o)
 
 CPPFLAGS := -I$(shell pwd)
-CFLAGS := 
+CFLAGS := -pthread
 
 .PHONY: all clean install
 

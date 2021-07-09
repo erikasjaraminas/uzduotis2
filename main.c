@@ -7,8 +7,10 @@
 #include <dirent.h>
 #include <file_operations.h>
 #include <parser.h>
+#include <pthread.h>
 
 #define READ_ELEMENTS 5
+#define NUM_WATCHFOLDERS 5
 
 struct Info
 {
@@ -17,11 +19,19 @@ struct Info
 	char folder_name[24];
 	int count;
 };
-
 struct Info keys_values[READ_ELEMENTS];
 
-char dir_to_watch[256];
+struct Watch
+{
+	char dir_to_watch[256];
+	int exists;
+};
+struct Watch watchlist[NUM_WATCHFOLDERS];
+
 FILE *log_file = NULL;
+
+struct dirent *pDirent;
+DIR *pDir = NULL;
 
 void free_up_memory() {
 
@@ -52,10 +62,11 @@ void assign_key_values() {
 	strcpy(keys_values[3].key_name, "document_types");
 	strcpy(keys_values[4].key_name, "types_to_watch");
 
-	strcpy(keys_values[0].folder_name, "%s/Music");
-	strcpy(keys_values[1].folder_name, "%s/Videos");
-	strcpy(keys_values[2].folder_name, "%s/Pictures");
-	strcpy(keys_values[3].folder_name, "%s/Documents");
+	char *homedir = getenv("HOME");
+	sprintf(keys_values[0].folder_name, "%s/Music", homedir);
+	sprintf(keys_values[1].folder_name, "%s/Videos", homedir);
+	sprintf(keys_values[2].folder_name, "%s/Pictures", homedir);
+	sprintf(keys_values[3].folder_name, "%s/Documents", homedir);
 }
 
 int read_values() {
@@ -68,10 +79,20 @@ int read_values() {
 	int c = 0;
 	char *token;
 	while(1) {
-		if (!strcmp(co->key, "dir_to_watch")) {
-			strcpy(dir_to_watch, co->value);
+		int i;
+		for (i = 0; i < NUM_WATCHFOLDERS; i++) {
+			if (watchlist[i].exists) {
+				continue;
+			}
+			watchlist[i].exists = 0;
+			char str[14];
+			sprintf(str, "dir_to_watch%d", i);
+			if (!strcmp(co->key, str)) {
+				watchlist[i].exists = 1;
+				strcpy(watchlist[i].dir_to_watch, co->value);
+			}
 		}
-		for (int i = 0; i < READ_ELEMENTS; i++) {
+		for (i = 0; i < READ_ELEMENTS; i++) {
 			if (!strcmp(co->key, keys_values[i].key_name)) {
 				keys_values[i].value[0] = (char *) malloc(5 * sizeof(char));
 				if (keys_values[i].value[0] == NULL) {
@@ -134,17 +155,14 @@ int create_daemon_process() {
 	return 0;
 }
 
-int move_files(int key, char *filename) {
+int move_files(int key, int idx, char *filename) {
 
 	int ret;
-	char *homedir = getenv("HOME");
-	char newpath[256];
 
-	for (int b = 0; b < keys_values[key].count; b++) {
-		if (checkFile(filename, keys_values[key].value[b])) {
-			sprintf(newpath, keys_values[key].folder_name, homedir);
-			file_printnflush(log_file, "Moving file '%s' to '%s'. ", filename, newpath);
-			ret = move(dir_to_watch, newpath, filename);
+	for (int i = 0; i < keys_values[key].count; i++) {
+		if (checkFile(filename, keys_values[key].value[i])) {
+			file_printnflush(log_file, "Moving file '%s' from '%s' to '%s'. ", filename, watchlist[idx].dir_to_watch, keys_values[key].folder_name);
+			ret = move(watchlist[idx].dir_to_watch, keys_values[key].folder_name, filename);
 			if (ret) {
 				file_printnflush(log_file, "Failed.\n");
 			} else {
@@ -154,6 +172,43 @@ int move_files(int key, char *filename) {
 	}
 
 	return ret;
+}
+
+void *perform_work(void *arguments) {
+
+	int index = *((int *)arguments);
+
+	while (1) {
+		pDir = opendir(watchlist[index].dir_to_watch);
+		if (pDir == NULL) {
+			file_printnflush(log_file, "Error opening '%s'\n", watchlist[index].dir_to_watch);
+			exit_program(1);
+		}
+
+		while ((pDirent = readdir(pDir)) != NULL) {
+			if (!strcmp(pDirent->d_name, ".") || !strcmp(pDirent->d_name, "..")) {
+				continue;
+			}
+
+			for (int i = 0; i < keys_values[4].count; i++) {
+				if (!strcmp(keys_values[4].value[i], "audio")) {
+					move_files(0, index, pDirent->d_name);
+				}
+				if (!strcmp(keys_values[4].value[i], "video")) {
+					move_files(1, index, pDirent->d_name);
+				}
+				if (!strcmp(keys_values[4].value[i], "photo")) {
+					move_files(2, index, pDirent->d_name);
+				}
+				if (!strcmp(keys_values[4].value[i], "document")) {
+					move_files(3, index, pDirent->d_name);
+				}
+			}
+		}
+
+		closedir(pDir);
+		sleep(5);
+	}
 }
 
 int main() {
@@ -168,8 +223,6 @@ int main() {
 		}
 	}
 
-	struct dirent *pDirent;
-	DIR *pDir = NULL;
 	FILE *conf = NULL;
 	// Open a log file in write mode.
 	log_file = fopen("/var/log/daemon.log", "w");
@@ -191,42 +244,38 @@ int main() {
 		exit_program(1);
 	}
 
-	while (1) {
-		pDir = opendir(dir_to_watch);
-		if (pDir == NULL) {
-			file_printnflush(log_file, "Error opening '%s'\n", dir_to_watch);
-			exit_program(1);
+	pthread_t threads[NUM_WATCHFOLDERS];
+	int thread_args[NUM_WATCHFOLDERS];
+	int i;
+	int result_code;
+	
+	//create all threads one by one
+	for (i = 0; i < NUM_WATCHFOLDERS; i++) {
+		if (!watchlist[i].exists) {
+			break;
 		}
-
-		while ((pDirent = readdir(pDir)) != NULL) {
-			if (!strcmp(pDirent->d_name, ".") || !strcmp(pDirent->d_name, "..")) {
-				continue;
-			}
-
-			for (int a = 0; a < keys_values[4].count; a++) {
-				if (!strcmp(keys_values[4].value[a], "audio")) {
-					move_files(0, pDirent->d_name);
-				}
-				if (!strcmp(keys_values[4].value[a], "video")) {
-					move_files(1, pDirent->d_name);
-				}
-				if (!strcmp(keys_values[4].value[a], "photo")) {
-					move_files(2, pDirent->d_name);
-				}
-				if (!strcmp(keys_values[4].value[a], "document")) {
-					move_files(3, pDirent->d_name);
-				}
-			}
+		thread_args[i] = i;
+		result_code = pthread_create(&threads[i], NULL, perform_work, &thread_args[i]);
+		if (result_code) {
+			file_printnflush(log_file, "Error creating new thread\n");
+			return 1;
 		}
-
-		closedir(pDir);
-
-		sleep(5);
+	}
+	
+	//wait for each thread to complete
+	for (i = 0; i < NUM_WATCHFOLDERS; i++) {
+		if (!watchlist[i].exists) {
+			break;
+		}
+		result_code = pthread_join(threads[i], NULL);
+		if (result_code) {
+			file_printnflush(log_file, "Error creating new thread\n");
+			return 1;
+		}
 	}
 
 	free_up_memory();
-
 	fclose(log_file);
 
-	return (0);
+	return 0;
 }
